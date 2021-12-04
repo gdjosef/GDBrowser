@@ -42,7 +42,7 @@
 	</div>
 
 	<div style="position:absolute; bottom: 0%; right: 0%; width: 100%; text-align: right;">
-		<a title="Boomlings Leaderboard?????" href="../boomlings"><img id="boomling" style="position: absolute; width: 6%; top: 2%; right: 1%"></a>
+		<a title="Boomlings Leaderboard?????" href="../boomlings"><img id="boomling" style="position: absolute; width: 6%; top: 2%; right: 1%; display: none"></a>
 		<img class="cornerPiece noClick" src="../assets/corner.png" width=7%; style="transform: scaleX(-1)">
 	</div>
 
@@ -72,6 +72,11 @@
 		<img class="gdButton" src="../assets/smallinfo.png" width="32%" onclick="$('#infoDiv').show()">
 	</div>
 
+	<div style="position:absolute; top: 12%; right: 1.5%; width: 21%; text-align: right;">
+		<a id="discord" target="_blank" title="Official leaderboard Discord!" href="https://discord.gg/leaderboard"><img class="gdButton" src="../assets/discord.png" width="20%"></a>
+		<a id="altDiscord" target="_blank" title="Accurate leaderboard Discord!" style="display: none; filter: hue-rotate(300deg)" href="https://discord.gg/Uz7pd4"><img class="gdButton" src="../assets/discord.png" width="20%"></a>
+	</div>
+
 	<div class="supercenter" id="loading" style="height: 10%; top: 47%; display: none;">
 		<img class="spin noSelect" src="../assets/loading.png" height="105%">
 	</div>
@@ -94,7 +99,7 @@ let trophies = [1, 3, 10, 25, 50, 75, 100]
 let boomColors = ["red", "orange", "yellow", "green", "teal", "blue", "pink"]
 
 let top250Text = 
-`The <cg>Stars</cg> leaderboard contains the <cg>top 250 players</cg>, sorted by <cy>star</cy> value. It was formerly <co>inaccurate</co> in vanilla GD but should be much more <cb>reliable</cb> now.`
+`The <cg>Stars</cg> leaderboard contains the <cg>top 250 players</cg>, sorted by <cy>star</cy> value. It was formerly <co>inaccurate</co> but should be much more <cb>reliable</cb> now.`
 
 let topGDPSText = 
 `The <cg>Stars</cg> leaderboard contains the <cg>top players</cg>, sorted by <cy>star</cy> value.`
@@ -103,15 +108,20 @@ let weeklyText =
 `The <cg>Weekly</cg> leaderboard displays the players who have gained the most <cy>stars</cy> in the <cb>past week</cb>. It was officially <co>removed</co> in update 2.0, but lives on in some GDPS'es.`
 
 let accurateText =
-`The <cg>Accurate Leaderboard</cg> is a highly accurate, hacker-proof leaderboard with <cy>proper stats and positioning</cy> (unlike the regular one). It is managed by <cb>XShadowWizardX, Pepper360, Octeract</cb>, and many many other helpers. Be sure to check out their <a target="_blank" href="https://docs.google.com/spreadsheets/d/10lbPnDYJXhbtlA0ls0cGjjX_osFSG559IDrTbhgPHvc"><ca class="underline">interactive leaderboard spreadsheet</ca></a> or join their <a target="_blank" href="https://discord.gg/Uz7pd4d"><ca class="underline">Discord server<ca></a>.`
+`The <cg>Accurate Leaderboard</cg> is an <cy>externally managed</cy> leaderboard which aims to provide <ca>detailed</ca> and hacker-proof stats on top players. It also once provided a way to view an <cg>accurate</cg> list of players with the most <cy>stars</cy> when the official leaderboards were <ca>frozen</ca>. It is managed by <cb>XShadowWizardX, Pepper360, Octeract</cb>, and many many other helpers.`
 
 let creatorText = 
 `The <cg>Creators Leaderboard</cg> is sorted by <cg>creator points</cg>, rather than stars. A player's <cg>creator points</cg> (CP) is calculated by counting their number of <cy>star rated</cy> levels, plus an extra point for every level that has been <cb>featured</cb>, plus an additional point for <co>epic rated</co> levels.`
 
 if (showWeek) $('#weeklyStats').attr('src', '../assets/sort-week-on.png')
 
-function infoText(text) { $('#infoText').html(text) }
-infoText(accurateText)
+function infoText(text, altDiscord) {
+	$('#infoText').html(text)
+	if (altDiscord) { $('#discord').hide(); $('#altDiscord').show() }
+	else { $('#discord').show(); $('#altDiscord').hide() }
+}
+
+infoText(top250Text)
 
 function leaderboard(val) {
 
@@ -120,18 +130,18 @@ function leaderboard(val) {
 
 	Fetch(`../api/leaderboard?count=250&${val}&type=${sort}${modMode ? "&mod=1" : ""}`).then(res => {
 
-		top250Text = topGDPSText
-		$('#boomling').remove()
-
 		if (gdps) {
+			top250Text = topGDPSText
+			$('#accurateTabOn').remove()
+			$('#accurateTabOff').remove()
+
 			Fetch('../api/gdps?current=1').then(ps => {
-				$('#accurateTabOn').remove()
-				$('#accurateTabOff').remove()
 				if (weekly) return
 				else if (ps.weeklyLeaderboard) { $('#weeklyTabOff').show(); weekly = true }
 				else $('#scoreTabs').css('margin-left', '-29vh')
 			})
 		}
+		else $('#boomling').show()
 
 		$('#searchBox').html(`<div style="height: 4.5%"></div>`)
 		$('.ranking').remove()
@@ -225,7 +235,7 @@ $('#accurateTabOff').click(function() {
 	$('#topTabOff').show()
 	$('#accurateTabOn').show()
 	$('#creatorTabOff').show()
-	infoText(accurateText)
+	infoText(accurateText, true)
 	$('.sortDiv').show()
 })
 
