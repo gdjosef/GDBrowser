@@ -65,23 +65,23 @@ async function buildIcon(account=[], userCode) {
 
   let useGlow = req.query.glow || account[28] || false;
   if (useGlow && ["false", "0"].includes(useGlow)) useGlow = false
-  if (col1.r == 0 && col1.g == 0 && col1.b == 0 ) useGlow = true
+  if (col1.r == 0 && col1.g == 0 && col1.b == 0 ) useGlow = true // if no color, use glow by default -josef
 
   // bit of a hacky solution for glow color but whatev
   let glowColor = colG || col2
-  if (glowColor.r == 0 && glowColor.g == 0 && glowColor.b == 0) glowColor = col1
-  if (glowColor.r == 0 && glowColor.g == 0 && glowColor.b == 0) glowColor = {r: 255, g: 255, b: 255}
+  if (glowColor.r == 0 && glowColor.g == 0 && glowColor.b == 0) glowColor = col1 // if no glow color, use primary color -josef
+  if (glowColor.r == 0 && glowColor.g == 0 && glowColor.b == 0) glowColor = {r: 255, g: 255, b: 255} // if no glow color, use white -josef
 
   let psdExport = req.query.psd || false
-  let topless = form.name == "UFO" ? req.query.topless || false : false
+  let topless = form.name == "UFO" ? req.query.topless || false : false // if UFO, use topless param if set -josef
 
   let customSize = req.query.size == "auto" ? "auto" : +req.query.size || null
 
   let iconPath = getIconPath(iconID, form.form)
 
-  let iconCode = `${form.name}-${iconID}-${col1.val}-${col2.val}-${colG ? colG.val : "x"}-${colW ? colW.val : "x"}-${useGlow ? 1 : 0}` 
-  let cachable = !topless && !customSize && !psdExport
-  if (cachable && cache[iconCode]) return res.end(cache[iconCode].buffer)
+  let iconCode = `${form.name}-${iconID}-${col1.val}-${col2.val}-${colG ? colG.val : "x"}-${colW ? colW.val : "x"}-${useGlow ? 1 : 0}` // generate icon code as identifier -josef
+  let cachable = !topless && !customSize && !psdExport // if not topless, custom size, or psd export, cache icon -josef
+  if (cachable && cache[iconCode]) return res.end(cache[iconCode].buffer) // if cached, return cached icon -josef
 
   // default to 1 if icon ID does not exist
   if (!fs.existsSync(getPartName(1).slice(1))) { // slice 1 from filename since fs reads paths differently
@@ -92,14 +92,14 @@ async function buildIcon(account=[], userCode) {
   // get path of icon 'part' (1: primary, 2: secondary, 3: ufo top, extra: white, glow: glow, )
   function getPartName(part, robotPart) {
     let path = iconPath
-    if (form.legs) path += `_0${robotPart || 1}`
+    if (form.legs) path += `_0${robotPart || 1}` // if robot, add robot part number -josef
     if (!part || part == "1") return `${path}_001.png`
     else return `${path}_${part}_001.png`
   }
 
   // recolor white parts of icon to specified color
   async function recolor(img, col) {
-    let rawData = await img.raw().toBuffer({resolveWithObject: true})
+    let rawData = await img.raw().toBuffer({resolveWithObject: true}) // get raw data of image -josef
     for (let i=0; i<rawData.data.length; i += 4) { // [R, G, B, A]
       if (rawData.data[i + 3] > 0) {
         rawData.data[i] = col.r / (255 / rawData.data[i]);
@@ -107,23 +107,25 @@ async function buildIcon(account=[], userCode) {
         rawData.data[i + 2] = col.b / (255 / rawData.data[i + 2]);
       }
     }
-    return sharp(rawData.data, {raw: {width: rawData.info.width, height: rawData.info.height, channels: 4,  background: TRANSPARENT}}).png()
+    return sharp(rawData.data, {raw: {width: rawData.info.width, height: rawData.info.height, channels: 4,  background: TRANSPARENT}}).png() // create new image with recolored data -josef
   }
 
   // color icon part and add to layer list
   async function addLayer(part, color, legSection) {
 
-    let leg = legSection ? legSection.leg : null
+    let leg = legSection ? legSection.leg : null // if leg section, get leg number -josef
 
-    let partName = getPartName(part, leg)
-    let offsetData = icons[partName.slice(mainPath.length)]
-    let { spriteSize, spriteOffset } = offsetData
+    let partName = getPartName(part, leg) // get path of part -josef
+    let offsetData = icons[partName.slice(mainPath.length)] // get offset data of part -josef
+    let { spriteSize, spriteOffset } = offsetData // get sprite size and offset of part -josef
 
     let builtPart = sharp(partName.slice(1)) // slice 1 from filename since sharp also reads paths differently
-    if (color) builtPart = await recolor(builtPart, color)
+    if (color) builtPart = await recolor(builtPart, color) // if color, recolor part -josef
 
     let left = halfCanvas - Math.floor(spriteSize[0] / 2) + spriteOffset[0]
     let top = halfCanvas - Math.floor(spriteSize[1] / 2) - spriteOffset[1]
+
+    console.log(`${partName} ${left} ${top}`)
 
     if (legSection) {
       left += Math.floor(legSection.xPos)
@@ -131,7 +133,7 @@ async function buildIcon(account=[], userCode) {
       // if (legSection.darken) builtPart.tint({r: 100, g: 100, b: 100})
       if (legSection.rotation) {
         builtPart.rotate(legSection.rotation, {background: TRANSPARENT})
-        if (part == "glow") { left--; top--; }
+        if (part == "glow") { left--; top--; } // if glow, shift glow to center -josef
       }
       if (legSection.yScale) builtPart.resize({width: spriteSize[0], height: Math.floor(spriteSize[1] * legSection.yScale), fit: "fill"})
       if (legSection.xFlip) builtPart.flop()
@@ -146,8 +148,8 @@ async function buildIcon(account=[], userCode) {
       left, top 
     }
 
-    if (legSection) {
-      if (!legLayers[legSection.leg]) legLayers[legSection.leg] = [layerData]
+    if (legSection) { // if leg section, add leg layer to layer list -josef
+      if (!legLayers[legSection.leg]) legLayers[legSection.leg] = [layerData] // if leg not in list, add leg to list -josef
       else legLayers[legSection.leg].push(layerData)
     }
 
@@ -176,15 +178,18 @@ async function buildIcon(account=[], userCode) {
   let parentSize = icons[getPartName(1).slice(mainPath.length)].spriteSize
   let canvas = sharp({create: {width: canvasSize, height: canvasSize, channels: 4, background: TRANSPARENT}})
 
-  // if (legData.length) {
-  //   for (let i=0; i<legData.length; i++) {
-  //     await buildFullLayer(legData[i])
-  //   }
-  // }
+  if (legData.length) { // if legs, build legs first -josef
+    for (let i=0; i<legData.length; i++) {
+      console.log(`building leg ${i}`)
+      await buildFullLayer(legData[i])
+    }
+  }
 
-  await buildFullLayer()
+  await buildFullLayer() // build main body of icon
 
-  // if (legData.length) layers = legLayers.flat().filter(x => x).sort((a, b) => !!b.behind - !!a.behind).sort((a, b) => !!b.isGlow - !!a.isGlow)
+  if (legData.length) layers = legLayers.flat().filter(x => x).sort((a, b) => !!b.behind - !!a.behind).sort((a, b) => !!b.isGlow - !!a.isGlow) // if legs, sort layers by leg number and glow -josef
+
+  // console.log('layers:', layers);
 
   canvas.composite(layers)
 
@@ -243,6 +248,8 @@ async function buildIcon(account=[], userCode) {
       const img = new Image()
       img.onload = () => {
         ctx.drawImage(img, 0 + x.left - minX, 0 + x.top - minY)
+        console.log(`${x.layerName} done`)
+        console.log(0 + x.left - minX, 0 + x.top - minY)
       } 
       img.onerror = err => { throw err }
       img.src = x.input
