@@ -34,7 +34,7 @@ function getIconPath(icon, formName) {
 // get color from param input
 function getColor(colInput, defaultCol) {
   colInput = String(colInput)
-  let foundColor = colors[colInput] // use input to check for already existing colors in GD (stored in colors.json)
+  let foundColor = colors[colInput]
   if (foundColor) {
     foundColor.val = colInput
     return foundColor
@@ -47,7 +47,7 @@ function getColor(colInput, defaultCol) {
   else if (!foundColor && defaultCol)  {
     let def = colors[defaultCol]
     def.val = defaultCol
-    return def // just return the default color if the input is not in colors.json/does not match the hex regex
+    return def
   }
 }
 
@@ -79,12 +79,12 @@ async function buildIcon(account=[], userCode) {
 
   let iconPath = getIconPath(iconID, form.form)
 
-  let iconCode = `${form.name}-${iconID}-${col1.val}-${col2.val}-${colG ? colG.val : "x"}-${colW ? colW.val : "x"}-${useGlow ? 1 : 0}` 
+  let iconCode = `${form.name}-${iconID}-${col1.val}-${col2.val}-${colG ? colG.val : "x"}-${colW ? colW.val : "x"}-${useGlow ? 1 : 0}`
   let cachable = !topless && !customSize && !psdExport
   if (cachable && cache[iconCode]) return res.end(cache[iconCode].buffer)
 
   // default to 1 if icon ID does not exist
-  if (!fs.existsSync(getPartName(1).slice(1))) { // slice 1 from filename since fs reads paths differently
+  if (!fs.existsSync(getPartName(1).slice(1))) {
     iconID = 1
     iconPath = getIconPath(1, form.form)
   }
@@ -119,16 +119,18 @@ async function buildIcon(account=[], userCode) {
     let offsetData = icons[partName.slice(mainPath.length)]
     let { spriteSize, spriteOffset } = offsetData
 
-    let builtPart = sharp(partName.slice(1)) // slice 1 from filename since sharp also reads paths differently
+    let builtPart = sharp(partName.slice(1))
     if (color) builtPart = await recolor(builtPart, color)
 
     let left = halfCanvas - Math.floor(spriteSize[0] / 2) + spriteOffset[0]
     let top = halfCanvas - Math.floor(spriteSize[1] / 2) - spriteOffset[1]
 
+    console.log(`${partName} ${left} ${top}`)
+
     if (legSection) {
       left += Math.floor(legSection.xPos)
       top -= Math.floor(legSection.yPos)
-      if (part == 1 || part == 2) { // avoid tinting the actual glow and only the primary and secondary ones oops
+      if (part == 1 || part == 2) { // avoid darkening the actual glow and only the primary and secondary ones oops
         if (legSection.darken) builtPart.modulate({brightness: legSection.darken / 100}) // tint you suck
       }
       if (legSection.rotation) {
@@ -184,7 +186,7 @@ async function buildIcon(account=[], userCode) {
     }
   }
 
-  await buildFullLayer()
+  await buildFullLayer() // build main body of icon
 
   if (legData.length) layers = legLayers.flat().filter(x => x).sort((a, b) => !!b.behind - !!a.behind).sort((a, b) => !!b.isGlow - !!a.isGlow)
 
@@ -245,6 +247,8 @@ async function buildIcon(account=[], userCode) {
       const img = new Image()
       img.onload = () => {
         ctx.drawImage(img, 0 + x.left - minX, 0 + x.top - minY)
+        console.log(`${x.layerName} done`)
+        console.log(0 + x.left - minX, 0 + x.top - minY)
       } 
       img.onerror = err => { throw err }
       img.src = x.input
