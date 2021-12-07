@@ -34,7 +34,7 @@ function getIconPath(icon, formName) {
 // get color from param input
 function getColor(colInput, defaultCol) {
   colInput = String(colInput)
-  let foundColor = colors[colInput]
+  let foundColor = colors[colInput] // use input to check for already existing colors in GD (stored in colors.json)
   if (foundColor) {
     foundColor.val = colInput
     return foundColor
@@ -47,7 +47,7 @@ function getColor(colInput, defaultCol) {
   else if (!foundColor && defaultCol)  {
     let def = colors[defaultCol]
     def.val = defaultCol
-    return def
+    return def // just return the default color if the input is not in colors.json/does not match the hex regex
   }
 }
 
@@ -128,7 +128,9 @@ async function buildIcon(account=[], userCode) {
     if (legSection) {
       left += Math.floor(legSection.xPos)
       top -= Math.floor(legSection.yPos)
-      // if (legSection.darken) builtPart.tint({r: 100, g: 100, b: 100})
+      if (part == 1 || part == 2) { // avoid tinting the actual glow and only the primary and secondary ones oops
+        if (legSection.darken) builtPart.modulate({brightness: legSection.darken / 100}) // tint you suck
+      }
       if (legSection.rotation) {
         builtPart.rotate(legSection.rotation, {background: TRANSPARENT})
         if (part == "glow") { left--; top--; }
@@ -164,10 +166,10 @@ async function buildIcon(account=[], userCode) {
     await addLayer(1, col1, legSection) // primary color
     if (hasExtra) await addLayer("extra", colW, legSection) // extra
 
-    // if (legSection) {
-    //   let foundLeg = legLayers[legSection.leg]
-    //   foundLeg.forEach(x => layers.push(x))
-    // }
+    if (legSection) {
+      let foundLeg = legLayers[legSection.leg]
+      foundLeg.forEach(x => layers.push(x))
+    }
   }
 
   let layers = []
@@ -176,15 +178,15 @@ async function buildIcon(account=[], userCode) {
   let parentSize = icons[getPartName(1).slice(mainPath.length)].spriteSize
   let canvas = sharp({create: {width: canvasSize, height: canvasSize, channels: 4, background: TRANSPARENT}})
 
-  // if (legData.length) {
-  //   for (let i=0; i<legData.length; i++) {
-  //     await buildFullLayer(legData[i])
-  //   }
-  // }
+  if (legData.length) {
+    for (let i=0; i<legData.length; i++) {
+      await buildFullLayer(legData[i])
+    }
+  }
 
   await buildFullLayer()
 
-  // if (legData.length) layers = legLayers.flat().filter(x => x).sort((a, b) => !!b.behind - !!a.behind).sort((a, b) => !!b.isGlow - !!a.isGlow)
+  if (legData.length) layers = legLayers.flat().filter(x => x).sort((a, b) => !!b.behind - !!a.behind).sort((a, b) => !!b.isGlow - !!a.isGlow)
 
   canvas.composite(layers)
 
@@ -274,8 +276,8 @@ async function buildIcon(account=[], userCode) {
 // ==================================== //
 
 // OLD CODE IS BEING USED FOR ROBOTS AND SPIDERS
-let formCheck = forms[req.query.form]
-if (formCheck && formCheck.legs) return app.run.icon_old(app, req, res)
+// let formCheck = forms[req.query.form]
+// if (formCheck && formCheck.legs) return app.run.icon_old(app, req, res)
 
 let username = req.params.text
 let userCode;

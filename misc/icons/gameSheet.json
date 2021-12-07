@@ -4320,7 +4320,7 @@
     "spriteSize": [38, 74]
   },
   "spider_02_03_2_001.png": {
-    "spriteOffset": [-9, 14],
+    "spriteOffset": [14, 14],
     "spriteSize": [14, 26]
   },
   "spider_02_03_glow_001.png": {
